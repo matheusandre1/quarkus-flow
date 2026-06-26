@@ -22,8 +22,8 @@ The module resolves the Quarkus gRPC named channel to use for each workflow task
 
 1. **Task-level override**: `quarkus.flow.grpc.client.<workflowId>:<taskName>.name=<clientName>`
 2. **Workflow-level override**: `quarkus.flow.grpc.client.<workflowId>.name=<clientName>`
-3. **Default channel**: If a Quarkus gRPC client named `flowGrpc` exists, it is used for all workflows.
-4. **Workflow ID as client name**: If a Quarkus gRPC client matching the workflow ID exists, it is used.
+3. **Workflow ID as client name**: If a Quarkus gRPC client matching the workflow ID exists, it is used.
+4. **Default channel**: If a Quarkus gRPC client named `flowGrpc` exists, it is used for all workflows.
 5. **SDK fallback**: If none of the above match, the SDK falls back to the host and port declared in the workflow itself.
 
 The workflow ID is `namespace:name:version` (e.g. `org.acme:grpcGreeting:0.0.1`).

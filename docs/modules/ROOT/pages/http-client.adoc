@@ -27,7 +27,7 @@ All Flow HTTP and OpenAPI tasks use a `jakarta.ws.rs.client.Client` managed by Q
 At runtime, Quarkus Flow:
 * Builds a *default client* from `quarkus.flow.http.client.*`.
 * Optionally builds *named clients* from `quarkus.flow.http.client.named.<name>.*`.
-* Resolves *which client to use* for a given workflow or task using `quarkus.flow.http.client.workflow.*` routing.
+* Resolves *which client to use* for a given workflow or task using `quarkus.flow.http.client.client.*` routing.
 * Reuses and closes these clients automatically at the end of the application lifecycle.
 
 == 2. Configure the default HTTP client
@@ -68,20 +68,23 @@ quarkus.flow.http.client.named.internal.connection-pool-size=100
 
 == 4. Route workflows and tasks to clients
 
-Routing is configured under the `workflow` section:
+Routing is configured under the `client` section using workflow or task identifiers as keys:
 
 [source,properties]
 ----
-# Use "secureA" for all HTTP/OpenAPI tasks in the workflow "order-flow"
-quarkus.flow.http.client.workflow.order-flow.name=secureA
+# Use "secureA" for all HTTP/OpenAPI tasks in the workflow "org.acme:order-flow:0.0.1"
+quarkus.flow.http.client.client."org.acme:order-flow:0.0.1".name=secureA
 
-# Override only the "fetchCustomers" task within "order-flow" to use "internal"
-quarkus.flow.http.client.workflow.order-flow.task.fetchCustomers.name=internal
+# Override only the "fetchCustomers" task to use "internal"
+quarkus.flow.http.client.client."org.acme:order-flow:0.0.1:fetchCustomers".name=internal
 ----
 
+The key format is `namespace:name:version` for workflow-level overrides, or `namespace:name:version:taskName` for task-level overrides.
+
 Resolution order for a call:
-. Task-level override.
-. Workflow-level default.
+. Task-level override (`namespace:name:version:taskName`).
+. Workflow-level override (`namespace:name:version`).
+. Workflow ID as named client (if a named client matching the workflow ID exists).
 . Fallback to the global default client.
 
 [IMPORTANT]

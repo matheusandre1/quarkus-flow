@@ -55,6 +55,10 @@ public class FaultToleranceProvider {
 
     private volatile TypedGuard<CompletionStage<WorkflowModel>> defaultGuard;
 
+    private String workflowKey(WorkflowTaskContext ctx) {
+        return ctx.workflowId().toString(":");
+    }
+
     public FaultToleranceProvider(FlowHttpConfig flowHttpConfig, FlowMetricsConfig flowMetricsConfig) {
         this.flowHttpConfig = flowHttpConfig;
         this.flowMetricsConfig = flowMetricsConfig;
@@ -62,7 +66,7 @@ public class FaultToleranceProvider {
     }
 
     public TypedGuard<CompletionStage<WorkflowModel>> guardFor(WorkflowTaskContext ctx) {
-        String guardName = this.routingNameResolver.resolveName(ctx.workflowName(), ctx.taskName());
+        String guardName = this.routingNameResolver.resolveName(ctx.workflowId(), ctx.taskName());
         if (guardName == null) {
             return getOrCreateDefaultGuard(ctx);
         }
@@ -140,7 +144,7 @@ public class FaultToleranceProvider {
                     .onFailure(() -> sendCircuitBreakerFailure(ctx))
                     .onPrevented(() -> sendCircuitBreakerPrevented(ctx))
                     .onStateChange(state -> {
-                        CircuitBreakerKey key = new CircuitBreakerKey(ctx.workflowName(), ctx.taskName());
+                        CircuitBreakerKey key = new CircuitBreakerKey(workflowKey(ctx), ctx.taskName());
                         onCircuitBreakerStateChange(state, key);
                     })
                     .done();
@@ -189,40 +193,43 @@ public class FaultToleranceProvider {
     }
 
     private void sendOnFailureMetric(WorkflowTaskContext ctx) {
+        String workflowKey = workflowKey(ctx);
         Counter.builder(FlowMetrics.FAULT_TOLERANCE_TASK_RETRY_FAILURE_TOTAL.prefixedWith(flowMetricsConfig.prefix().get()))
                 .description("Fault Tolerance Task Failure")
                 .tag("task", ctx.taskName())
-                .tag("workflow", ctx.workflowName())
+                .tag("workflow", workflowKey)
                 .register(Metrics.globalRegistry)
                 .increment();
     }
 
     private void sendOnRetryMetric(WorkflowTaskContext ctx) {
+        String workflowKey = workflowKey(ctx);
         Counter.builder(FlowMetrics.FAULT_TOLERANCE_TASK_RETRY_TOTAL.prefixedWith(flowMetricsConfig.prefix().get()))
                 .description("Fault Tolerance Task Retry")
                 .tag("task", ctx.taskName())
-                .tag("workflow", ctx.workflowName())
+                .tag("workflow", workflowKey)
                 .register(Metrics.globalRegistry)
                 .increment();
-
     }
 
     private void sendCircuitBreakerPrevented(WorkflowTaskContext ctx) {
+        String workflowKey = workflowKey(ctx);
         Counter.builder(
                 FlowMetrics.FAULT_TOLERANCE_CIRCUIT_BREAKER_PREVENTED_TOTAL.prefixedWith(flowMetricsConfig.prefix().get()))
                 .description("Fault Tolerance Circuit Breaker Prevented")
                 .tag("task", ctx.taskName())
-                .tag("workflow", ctx.workflowName())
+                .tag("workflow", workflowKey)
                 .register(Metrics.globalRegistry)
                 .increment();
     }
 
     private void sendCircuitBreakerFailure(WorkflowTaskContext ctx) {
+        String workflowKey = workflowKey(ctx);
         Counter.builder(
                 FlowMetrics.FAULT_TOLERANCE_CIRCUIT_BREAKER_FAILURE_TOTAL.prefixedWith(flowMetricsConfig.prefix().get()))
                 .description("Fault Tolerance Circuit Breaker Failure")
                 .tag("task", ctx.taskName())
-                .tag("workflow", ctx.workflowName())
+                .tag("workflow", workflowKey)
                 .register(Metrics.globalRegistry)
                 .increment();
     }
@@ -233,7 +240,7 @@ public class FaultToleranceProvider {
         private final AtomicLong closed = new AtomicLong();
     }
 
-    private record CircuitBreakerKey(String workflowName, String taskName) {
+    private record CircuitBreakerKey(String workflowKey, String taskName) {
     }
 
     private void onCircuitBreakerStateChange(CircuitBreakerState state, CircuitBreakerKey key) {
@@ -265,21 +272,21 @@ public class FaultToleranceProvider {
             Gauge.builder(FlowMetrics.FAULT_TOLERANCE_CIRCUIT_BREAKER_OPEN.prefixedWith(flowMetricsConfig.prefix().get()),
                     circuitBreakerCounters.open, AtomicLong::get)
                     .description("Circuit Breaker Currently Open")
-                    .tag("workflow", workflowMetadata.workflowName())
+                    .tag("workflow", workflowMetadata.workflowKey())
                     .tag("task", workflowMetadata.taskName())
                     .register(Metrics.globalRegistry);
 
             Gauge.builder(FlowMetrics.FAULT_TOLERANCE_CIRCUIT_BREAKER_HALF_OPEN.prefixedWith(flowMetricsConfig.prefix().get()),
                     circuitBreakerCounters.halfOpen, AtomicLong::get)
                     .description("Circuit Breaker Currently Half Open")
-                    .tag("workflow", workflowMetadata.workflowName())
+                    .tag("workflow", workflowMetadata.workflowKey())
                     .tag("task", workflowMetadata.taskName())
                     .register(Metrics.globalRegistry);
 
             Gauge.builder(FlowMetrics.FAULT_TOLERANCE_CIRCUIT_BREAKER_CLOSED.prefixedWith(flowMetricsConfig.prefix().get()),
                     circuitBreakerCounters.closed, AtomicLong::get)
                     .description("Circuit Breaker Currently Closed")
-                    .tag("workflow", workflowMetadata.workflowName())
+                    .tag("workflow", workflowMetadata.workflowKey())
                     .tag("task", workflowMetadata.taskName())
                     .register(Metrics.globalRegistry);
 

@@ -32,16 +32,11 @@ import io.smallrye.config.WithDefault;
  * quarkus.flow.http.client.named.secureA.user-agent=MyCompanyBot/1.0
  * </pre>
  * <p>
- * Workflow-level routing:
+ * Workflow and task-level routing:
  *
  * <pre>
- * quarkus.flow.http.client.workflow.myFlow.name = secureA
- * </pre>
- * <p>
- * Task-level routing:
- *
- * <pre>
- * quarkus.flow.http.client.workflow.myFlow.task.fetchCustomers.name = secureB
+ * quarkus.flow.http.client.client."org.acme:myFlow:0.0.1".name=secureA
+ * quarkus.flow.http.client.client."org.acme:myFlow:0.0.1:fetchCustomers".name=secureB
  * </pre>
  */
 @ConfigMapping(prefix = "quarkus.flow.http.client")
@@ -54,7 +49,7 @@ public interface FlowHttpConfig extends HttpClientConfig {
      * Each entry maps to:
      *
      * <pre>
-     * quarkus.flow.http.client.named.&lt;name&gt;.&lt;property&gt;
+     * quarkus.flow.http.client.named.<name>.<property>
      * </pre>
      *
      * For example:
@@ -69,73 +64,28 @@ public interface FlowHttpConfig extends HttpClientConfig {
     Map<String, HttpClientConfig> named();
 
     /**
-     * Workflow-level HTTP client routing configuration.
+     * HTTP client name overrides keyed by workflow or task identifier.
      * <p>
-     * Each entry is keyed by the workflow id and maps to:
+     * Keys can be:
+     * <ul>
+     * <li>{@code <namespace>:<name>:<version>} — workflow-level override</li>
+     * <li>{@code <namespace>:<name>:<version>:<taskName>} — task-level override</li>
+     * </ul>
      *
-     * <pre>
-     * quarkus.flow.http.client.workflow.&lt;workflowName&gt;.name=&lt;clientName&gt;
-     * quarkus.flow.http.client.workflow.&lt;workflowName&gt;.task.&lt;taskName&gt;.name=&lt;clientName&gt;
-     * </pre>
-     *
-     * @return the map of workflow routing configurations
+     * @return the map of client overrides
      */
-    Map<String, WorkflowRoutingConfig> workflow();
+    Map<String, ClientOverride> client();
 
     /**
-     * Routing configuration for a single workflow.
-     * <p>
-     * Allows selecting a default client for the workflow and
-     * overriding it on a per-task basis.
+     * Override for the named HTTP client to use.
      */
-    interface WorkflowRoutingConfig {
+    interface ClientOverride {
 
         /**
-         * Client name to use for all HTTP/OpenAPI tasks in this workflow
-         * when there is no task-level override.
-         * <p>
-         * Property:
+         * The named HTTP client to use, configured under
+         * {@code quarkus.flow.http.client.named.<name>}.
          *
-         * <pre>
-         * quarkus.flow.http.client.workflow.&lt;workflowName&gt;.name=&lt;clientName&gt;
-         * </pre>
-         *
-         * @return the client name for this workflow, if configured
-         */
-        Optional<String> name();
-
-        /**
-         * Per-task client overrides for this workflow.
-         * <p>
-         * Each entry is keyed by the task name and maps to:
-         *
-         * <pre>
-         * quarkus.flow.http.client.workflow.&lt;workflowName&gt;.task.&lt;taskName&gt;.name=&lt;clientName&gt;
-         * </pre>
-         *
-         * @return the map of per-task routing configurations
-         */
-        Map<String, TaskRoutingConfig> task();
-    }
-
-    /**
-     * Routing configuration for a single workflow task.
-     * <p>
-     * Allows selecting a specific client for one task within
-     * a workflow.
-     */
-    interface TaskRoutingConfig {
-
-        /**
-         * Client name to use for this specific task.
-         * <p>
-         * Property:
-         *
-         * <pre>
-         * quarkus.flow.http.client.workflow.&lt;workflowName&gt;.task.&lt;taskName&gt;.name=&lt;clientName&gt;
-         * </pre>
-         *
-         * @return the client name for this task, if configured
+         * @return the client name
          */
         Optional<String> name();
     }

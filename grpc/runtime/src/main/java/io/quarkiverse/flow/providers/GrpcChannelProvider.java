@@ -48,7 +48,7 @@ public class GrpcChannelProvider implements WorkflowApplicationBuilderCustomizer
     }
 
     private String resolveClientName(WorkflowDefinitionId workflowId, String taskName) {
-        String workflowKey = workflowId.toString(KEY_SEPARATOR);
+        String workflowKey = workflowId.toString();
 
         if (taskName != null && !taskName.isBlank()) {
             String taskKey = workflowKey + KEY_SEPARATOR + taskName;
